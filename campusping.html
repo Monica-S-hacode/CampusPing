@@ -1,0 +1,645 @@
+<title>CampusPing</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* Layout: one narrow column, a demo strip on top, four tabs, cards as the only repeated object. */
+:root {
+  --bg: #F1F5F9; --surface: #FFFFFF; --fg: #0E1C2A; --muted: #546577; --line: #D6DFE8;
+  --accent: #1F55C7; --accent-fg: #FFFFFF;
+  --found: #0B7552; --found-bg: #D9F2E7;
+  --lost: #B0341D; --lost-bg: #FBE2DC;
+  --need: #7F5300; --need-bg: #FBEDC6;
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0B131B; --surface: #131F2D; --fg: #E6EDF4; --muted: #9AABBB; --line: #26374A;
+    --accent: #7AA2FF; --accent-fg: #0B131B;
+    --found: #5ED5A3; --found-bg: #11382B; --lost: #FF9C87; --lost-bg: #411F18; --need: #F3C85A; --need-bg: #3A2E0E;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0B131B; --surface: #131F2D; --fg: #E6EDF4; --muted: #9AABBB; --line: #26374A;
+  --accent: #7AA2FF; --accent-fg: #0B131B;
+  --found: #5ED5A3; --found-bg: #11382B; --lost: #FF9C87; --lost-bg: #411F18; --need: #F3C85A; --need-bg: #3A2E0E;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--font-body); }
+.wrap { max-width: 760px; margin: 0 auto; padding-block: 20px 72px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3 { font-family: var(--font-display); margin: 0; text-wrap: balance; }
+h1 { font-size: 28px; letter-spacing: -0.01em; }
+h2 { font-size: 19px; }
+h3 { font-size: 17px; }
+p { margin: 0; }
+.sub { color: var(--muted); margin-top: 4px; max-width: 58ch; }
+.eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+
+.demo { margin-top: 18px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: grid; gap: 12px; }
+.demo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.demo label { display: grid; gap: 4px; min-width: 0; }
+.demo .fine { color: var(--muted); font-size: 12.5px; }
+
+button, input, select, textarea { font: inherit; color: var(--fg); }
+input, select, textarea { width: 100%; min-height: 42px; padding: 8px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+textarea { resize: vertical; min-height: 84px; }
+button { cursor: pointer; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); padding: 8px 14px; min-height: 40px; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); font-weight: 600; }
+button.ghost { background: transparent; }
+button.small { min-height: 34px; padding: 5px 11px; font-size: 14px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+.tabs { margin-top: 18px; display: flex; gap: 2px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.tab { border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; padding: 10px 12px; white-space: nowrap; color: var(--muted); }
+.tab[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+.count { display: inline-block; min-width: 20px; padding: 0 6px; margin-left: 6px; border-radius: 10px; background: var(--line); color: var(--fg); font-size: 12px; text-align: center; font-variant-numeric: tabular-nums; }
+
+.panel { margin-top: 18px; display: grid; gap: 14px; }
+.panel-head p { color: var(--muted); margin-top: 3px; max-width: 60ch; }
+.list { display: grid; gap: 12px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: grid; gap: 8px; min-width: 0; }
+.card.hl { outline: 2px solid var(--accent); }
+.card-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.badge { font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 999px; letter-spacing: 0.02em; }
+.badge.found { background: var(--found-bg); color: var(--found); }
+.badge.lost { background: var(--lost-bg); color: var(--lost); }
+.badge.need { background: var(--need-bg); color: var(--need); }
+.clock, .chip { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.chip { border: 1px solid var(--line); border-radius: 999px; padding: 1px 9px; }
+.desc { overflow-wrap: anywhere; }
+.meta { color: var(--muted); font-size: 13.5px; }
+.note { color: var(--muted); font-size: 14px; }
+.fine { color: var(--muted); font-size: 12.5px; }
+.resp { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: center; border-top: 1px solid var(--line); padding-top: 8px; }
+.resp > div:first-child { min-width: 0; flex: 1 1 220px; overflow-wrap: anywhere; }
+.match { border-top: 1px dashed var(--line); padding-top: 8px; display: grid; gap: 6px; }
+.match-item { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: center; font-size: 14px; }
+.contact { background: var(--found-bg); color: var(--found); border-radius: 8px; padding: 8px 10px; font-size: 14px; overflow-wrap: anywhere; }
+.claim { display: grid; gap: 8px; border-top: 1px solid var(--line); padding-top: 10px; }
+.claim label, .field label { font-size: 13.5px; font-weight: 500; }
+.empty { border: 1px dashed var(--line); border-radius: 12px; padding: 18px; color: var(--muted); }
+
+.filters { display: grid; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+.filters-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg button { background: transparent; }
+.seg button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); font-weight: 600; }
+.form { display: grid; gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+.field { display: grid; gap: 4px; min-width: 0; }
+.readonly { padding: 9px 10px; border: 1px dashed var(--line); border-radius: 8px; }
+.section-title { margin-top: 6px; }
+
+#toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 16px); opacity: 0; pointer-events: none; background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 10px; max-width: min(92vw, 460px); font-size: 14px; transition: opacity .18s, transform .18s; z-index: 20; }
+#toast.on { opacity: 1; transform: translate(-50%, 0); }
+@media (prefers-reduced-motion: reduce) { #toast { transition: none; } }
+@media (max-width: 560px) {
+  .demo-grid { grid-template-columns: 1fr; }
+  .filters-grid { grid-template-columns: 1fr; }
+}
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">IIT Bombay, Powai</p>
+    <h1>CampusPing</h1>
+    <p class="sub">Return what you find, ask for what you need, and reach the people standing near the place, instead of whoever is in your group chat.</p>
+  </header>
+
+  <section class="demo" aria-label="Demo controls">
+    <div class="eyebrow">Demo controls</div>
+    <div class="demo-grid">
+      <label for="who"><span class="fine">Viewing as</span><select id="who"></select></label>
+      <label for="where"><span class="fine">I am at</span><select id="where"></select></label>
+    </div>
+    <div class="row">
+      <button type="button" class="small" data-act="skip">Skip 30 min</button>
+      <button type="button" class="small ghost" data-act="reset">Reset demo data</button>
+    </div>
+    <p class="fine">Prototype with example students and items. Switch student to see both sides of a handoff. Production login would use IITB SSO.</p>
+  </section>
+
+  <nav class="tabs" id="tabs" role="tablist" aria-label="Sections"></nav>
+  <main class="panel" id="panel"></main>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* Hereabouts core rules. Pure functions, no DOM. Inlined into the page and tested with Node. */
+(function (root) {
+  'use strict';
+  var MIN = 60000, HOUR = 3600000, DAY = 86400000;
+
+  var ZONES = { academic: 'Academic area', hostels: 'Hostels', commons: 'Campus commons', transit: 'On the move' };
+
+  var LOCATIONS = [
+    { id: 'lhc', name: 'LHC (Lecture Hall Complex)', zone: 'academic' },
+    { id: 'lib', name: 'Central Library', zone: 'academic' },
+    { id: 'cc', name: 'Computer Centre (CC)', zone: 'academic' },
+    { id: 'main', name: 'Main Building', zone: 'academic' },
+    { id: 'kresit', name: 'KReSIT (CSE)', zone: 'academic' },
+    { id: 'ee', name: 'Electrical Dept', zone: 'academic' },
+    { id: 'me', name: 'Mechanical Dept', zone: 'academic' },
+    { id: 'ce', name: 'Civil Dept', zone: 'academic' },
+    { id: 'che', name: 'Chemical Dept', zone: 'academic' },
+    { id: 'phy', name: 'Physics Dept', zone: 'academic' },
+    { id: 'som', name: 'SJMSOM', zone: 'academic' },
+    { id: 'conv', name: 'Convocation Hall', zone: 'academic' },
+    { id: 'vmcc', name: 'VMCC', zone: 'academic' }
+  ];
+  for (var i = 1; i <= 18; i++) {
+    if (i === 17) continue; /* IITB numbers hostels 1-16 and 18, plus Tansa */
+    LOCATIONS.push({ id: 'h' + i, name: 'Hostel ' + i, zone: 'hostels' });
+  }
+  LOCATIONS.push(
+    { id: 'tansa', name: 'Tansa Hostel', zone: 'hostels' },
+    { id: 'sac', name: 'SAC (Students’ Activity Centre)', zone: 'commons' },
+    { id: 'gym', name: 'Gymkhana', zone: 'commons' },
+    { id: 'market', name: 'IIT Market', zone: 'commons' },
+    { id: 'gate', name: 'Main Gate', zone: 'commons' },
+    { id: 'shuttle', name: 'Campus shuttle bus', zone: 'transit' }
+  );
+
+  var CATEGORIES = [
+    { id: 'charger', label: 'Charger / cable' },
+    { id: 'umbrella', label: 'Umbrella' },
+    { id: 'earbuds', label: 'Earbuds / headphones' },
+    { id: 'watch', label: 'Watch / band' },
+    { id: 'id', label: 'ID card', sensitive: true },
+    { id: 'device', label: 'Phone / tablet', sensitive: true },
+    { id: 'bottle', label: 'Bottle / lunchbox' },
+    { id: 'calc', label: 'Calculator / stationery' },
+    { id: 'notes', label: 'Notes / books' },
+    { id: 'bag', label: 'Bag / other' }
+  ];
+  var NEED_CATS = ['charger', 'umbrella', 'calc', 'notes', 'bag'];
+  var NEED_TTLS = [15, 30, 60];
+  var TTL = { need: 30 * MIN, lost: 14 * DAY, found: 14 * DAY };
+  var MATCH_MIN = 3;
+
+  function byId(list, id) { for (var k = 0; k < list.length; k++) if (list[k].id === id) return list[k]; return null; }
+  function locById(id) { return byId(LOCATIONS, id); }
+  function catById(id) { return byId(CATEGORIES, id); }
+  function locName(id) { var l = locById(id); return l ? l.name : id; }
+  function catLabel(id) { var c = catById(id); return c ? c.label : id; }
+  function isSensitive(id) { var c = catById(id); return !!(c && c.sensitive); }
+  function fail(reason) { return { ok: false, reason: reason }; }
+
+  /* Holders have the item (a Found post, including things picked up by mistake). Seekers are people who lost it. */
+  function isHolder(p) { return p.type === 'found'; }
+
+  function isOpen(p, now) { return p.status === 'open' && now < p.expires; }
+  function statusOf(p, now) {
+    if (p.status === 'closed') return 'closed';
+    if (p.status === 'claimed') return 'claimed';
+    return now >= p.expires ? 'expired' : 'open';
+  }
+
+  /* What another student is allowed to read. Found IDs and phones keep their details private. */
+  function view(p, viewer) {
+    var masked = isHolder(p) && isSensitive(p.category) && p.author !== viewer.id;
+    var out = {}; for (var k in p) out[k] = p[k];
+    if (masked) out.desc = 'Details withheld until the owner is verified.';
+    out.masked = masked;
+    return out;
+  }
+
+  function makePost(f, user, now, counter) {
+    if (['lost', 'found', 'need'].indexOf(f.type) < 0) return fail('bad-type');
+    if (!catById(f.category)) return fail('bad-category');
+    if (!locById(f.loc)) return fail('bad-location');
+    var desc = (f.desc || '').trim();
+    if (desc.length < 3) return fail('desc-short');
+    var verifyQ = (f.verifyQ || '').trim();
+    var holder = f.type === 'found';
+    if (holder && isSensitive(f.category) && !verifyQ) return fail('verify-required');
+    var nowAt = holder ? (f.nowAt || f.loc) : '';
+    if (holder && !locById(nowAt)) return fail('bad-location');
+    var ttl = TTL[f.type];
+    if (f.type === 'need') ttl = (NEED_TTLS.indexOf(f.ttlMin) >= 0 ? f.ttlMin : 30) * MIN;
+    return {
+      ok: true,
+      post: {
+        id: 'p' + counter, type: f.type, category: f.category, desc: desc, loc: f.loc,
+        author: user.id, created: now, expires: now + ttl, status: 'open',
+        nowAt: nowAt, verifyQ: holder ? verifyQ : '', claims: []
+      }
+    };
+  }
+
+  /* Need-now posts reach only people standing in the same place. */
+  function needFeed(posts, viewer, now) {
+    var here = [], hidden = 0;
+    posts.forEach(function (p) {
+      if (p.type !== 'need' || !isOpen(p, now)) return;
+      if (p.author === viewer.id || p.loc === viewer.loc) here.push(p); else hidden++;
+    });
+    here.sort(function (a, b) { return b.created - a.created; });
+    return { here: here, hidden: hidden };
+  }
+
+  function filterLF(posts, viewer, now, o) {
+    var q = (o.q || '').trim().toLowerCase();
+    var maxAge = o.maxAgeDays ? o.maxAgeDays * DAY : Infinity;
+    return posts.filter(function (p) {
+      if (p.type === 'need' || !isOpen(p, now)) return false;
+      if (o.type && p.type !== o.type) return false;
+      if (o.category && p.category !== o.category) return false;
+      if (o.loc) {
+        if (o.loc.indexOf('zone:') === 0) { var l = locById(p.loc); if (!l || l.zone !== o.loc.slice(5)) return false; }
+        else if (p.loc !== o.loc) return false;
+      }
+      if (now - p.created > maxAge) return false;
+      if (q) {
+        var hay = (catLabel(p.category) + ' ' + view(p, viewer).desc + ' ' + locName(p.loc)).toLowerCase();
+        if (hay.indexOf(q) < 0) return false;
+      }
+      return true;
+    }).sort(function (a, b) { return b.created - a.created; });
+  }
+
+  function locScore(x, y) {
+    if (x === y) return 3;
+    var lx = locById(x), ly = locById(y);
+    return lx && ly && lx.zone === ly.zone ? 1.5 : 0;
+  }
+  function matchScore(a, b, now) {
+    if (a.id === b.id || a.type === 'need' || b.type === 'need') return 0;
+    if (isHolder(a) === isHolder(b)) return 0; /* one side lost it, the other side holds it */
+    if (a.category !== b.category || a.author === b.author) return 0;
+    if (!isOpen(a, now) || !isOpen(b, now)) return 0;
+    var h = isHolder(a) ? a : b, s = isHolder(a) ? b : a;
+    var loc = Math.max(locScore(h.loc, s.loc), locScore(h.nowAt || h.loc, s.loc));
+    var dt = Math.abs(a.created - b.created);
+    var time = dt <= DAY ? 2 : dt <= 3 * DAY ? 1 : dt <= 14 * DAY ? 0.5 : 0;
+    return loc + time;
+  }
+  function suggestMatches(p, posts, now) {
+    return posts.map(function (o) { return { post: o, score: matchScore(p, o, now) }; })
+      .filter(function (m) { return m.score >= MATCH_MIN; })
+      .sort(function (x, y) { return y.score - x.score; }).slice(0, 3);
+  }
+
+  function addClaim(p, user, text, now) {
+    if (!isOpen(p, now)) return fail('closed');
+    if (p.author === user.id) return fail('own-post');
+    if (p.type === 'need' && p.loc !== user.loc) return fail('not-nearby');
+    if (p.claims.some(function (c) { return c.by === user.id && c.status !== 'declined'; })) return fail('duplicate');
+    text = (text || '').trim();
+    if (isHolder(p) && isSensitive(p.category) && !text) return fail('answer-required');
+    p.claims.push({ id: p.id + 'c' + (p.claims.length + 1), by: user.id, text: text, status: 'pending', at: now });
+    return { ok: true };
+  }
+
+  function decideClaim(p, claimId, actor, approve, now) {
+    if (p.author !== actor.id) return fail('not-author');
+    if (p.status !== 'open' || now >= p.expires) return fail('closed');
+    var c = null; p.claims.forEach(function (x) { if (x.id === claimId) c = x; });
+    if (!c || c.status !== 'pending') return fail('no-claim');
+    if (approve) {
+      c.status = 'approved'; p.status = 'claimed';
+      p.claims.forEach(function (x) { if (x !== c && x.status === 'pending') x.status = 'declined'; });
+    } else c.status = 'declined';
+    return { ok: true };
+  }
+
+  function closePost(p, actor) {
+    if (p.author !== actor.id) return fail('not-author');
+    p.status = 'closed';
+    return { ok: true };
+  }
+
+  /* Contact details appear only for the two people who agreed to the handoff. */
+  function contactFor(p, viewer, users) {
+    if (p.status !== 'claimed' && p.status !== 'closed') return null;
+    var c = null; p.claims.forEach(function (x) { if (x.status === 'approved') c = x; });
+    if (!c) return null;
+    if (viewer.id === p.author) return users[c.by].contact;
+    if (viewer.id === c.by) return users[p.author].contact;
+    return null;
+  }
+
+  function ago(ms) {
+    var m = Math.floor(ms / MIN);
+    if (m < 1) return 'just now';
+    if (m < 60) return m + ' min ago';
+    var h = Math.floor(ms / HOUR);
+    if (h < 24) return h + ' h ago';
+    return Math.floor(ms / DAY) + ' d ago';
+  }
+  function left(ms) {
+    if (ms <= 0) return '0 min';
+    var m = Math.ceil(ms / MIN);
+    if (m < 60) return m + ' min';
+    var h = Math.ceil(ms / HOUR);
+    if (h < 48) return h + ' h';
+    return Math.ceil(ms / DAY) + ' d';
+  }
+
+  var api = {
+    MIN: MIN, HOUR: HOUR, DAY: DAY, ZONES: ZONES, LOCATIONS: LOCATIONS, CATEGORIES: CATEGORIES,
+    NEED_CATS: NEED_CATS, NEED_TTLS: NEED_TTLS, TTL: TTL, MATCH_MIN: MATCH_MIN,
+    locById: locById, catById: catById, locName: locName, catLabel: catLabel, isSensitive: isSensitive,
+    isOpen: isOpen, isHolder: isHolder, statusOf: statusOf, view: view, makePost: makePost, needFeed: needFeed,
+    filterLF: filterLF, matchScore: matchScore, suggestMatches: suggestMatches, addClaim: addClaim,
+    decideClaim: decideClaim, closePost: closePost, contactFor: contactFor, ago: ago, left: left
+  };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  root.Hereabouts = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script>
+(function () {
+  var H = window.Hereabouts;
+  var KEY = 'campusping-demo-v3', MIN = H.MIN, HOUR = H.HOUR, DAY = H.DAY;
+  var USERS = {
+    you:   { id: 'you',   name: 'Monica', contact: 'Monica@iitb.ac.in' },
+    meera: { id: 'meera', name: 'Meera', contact: 'meera@iitb.ac.in' },
+    rohan: { id: 'rohan', name: 'Rohan', contact: 'rohan@iitb.ac.in' }
+  };
+  var REASONS = {
+    'closed': 'That post is no longer open.', 'own-post': 'This is your own post.',
+    'not-nearby': 'You need to be in the same place to respond.', 'duplicate': 'You already responded to this.',
+    'answer-required': 'Answer the owner’s question first.', 'not-author': 'Only the poster can do that.',
+    'no-claim': 'That response is no longer pending.', 'desc-short': 'Add a few words of description.',
+    'verify-required': 'Add a question only the owner can answer.', 'bad-location': 'Pick a place.',
+    'not-here': 'Requests can only be posted from where you are.', 'bad-category': 'Pick a category.'
+  };
+  var state, clock = 0, tab = 'need', formType = 'need', claimOpen = null, hl = null, toastTimer = null;
+  var lf = { type: '', cat: '', loc: '', q: '', age: 14 };
+
+  function now() { return Date.now() + clock; }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function $(id) { return document.getElementById(id); }
+  function byId(id) { for (var i = 0; i < state.posts.length; i++) if (state.posts[i].id === id) return state.posts[i]; return null; }
+  function viewer() { var u = USERS[state.viewer]; return { id: u.id, name: u.name, loc: state.locs[u.id] }; }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+  function load() {
+    try { var s = JSON.parse(localStorage.getItem(KEY)); if (s && s.posts && Date.now() - s.seedAt < 6 * HOUR) return s; } catch (e) {}
+    return null;
+  }
+  function toast(msg) {
+    var t = $('toast'); t.textContent = msg; t.classList.add('on');
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.classList.remove('on'); }, 3200);
+  }
+
+  function seed() {
+    var t = Date.now(), c = 0;
+    function P(type, cat, loc, desc, author, age, q, nowAt) {
+      c++;
+      var ttl = type === 'need' ? 30 * MIN : 14 * DAY;
+      return { id: 'p' + c, type: type, category: cat, desc: desc, loc: loc, author: author, created: t - age, expires: t - age + ttl, status: 'open', nowAt: type === 'found' ? (nowAt || loc) : '', verifyQ: q || '', claims: [] };
+    }
+    var posts = [
+      P('need', 'charger', 'lhc', 'iPhone, 3% battery. 10 minutes on a charger is enough, I can wait by the socket.', 'meera', 6 * MIN),
+      P('need', 'charger', 'lhc', 'Any USB-C cable. Laptop is dying before the quiz.', 'rohan', 12 * MIN),
+      P('need', 'umbrella', 'main', 'Raining, need to reach the library in 20 minutes. Will return it today.', 'rohan', 10 * MIN),
+      P('need', 'calc', 'kresit', 'FX-991 for the next half hour, returned right after.', 'meera', 3 * MIN),
+      P('need', 'charger', 'lib', 'Type-C 65W charger for 15 minutes.', 'rohan', 2 * MIN),
+      P('lost', 'device', 'lhc', 'iPad Air, grey, blue folio case. Left on a bench after the 11:30 lecture.', 'meera', 2 * DAY),
+      P('found', 'device', 'lhc', 'iPad in a blue case, picked up after the lecture and left on a shelf at CC.', 'rohan', 2 * DAY - 3 * HOUR, 'What is on the lock screen?', 'cc'),
+      P('found', 'umbrella', 'lhc', 'Picked up a black umbrella with a wooden handle from an LA hall after class, thinking it was mine. Want to return it.', 'rohan', 5 * HOUR, 'What is tied to the handle?', 'h5'),
+      P('lost', 'umbrella', 'lhc', 'Black umbrella, wooden handle. Probably left after Tuesday’s lecture.', 'meera', 1 * DAY),
+      P('lost', 'earbuds', 'shuttle', 'White earbuds case with a small sticker. Fell out near the back seat.', 'you', 4 * HOUR),
+      P('found', 'earbuds', 'shuttle', 'White earbuds case found on a seat.', 'rohan', 1 * HOUR, 'What sticker is on it?'),
+      P('found', 'id', 'lib', 'IIT Bombay ID card. Name R. Iyer, roll number starts 23B.', 'meera', 1 * DAY, 'Which department and year are on the card?'),
+      P('found', 'earbuds', 'sac', 'Black earbuds case, no sticker.', 'rohan', 3 * DAY),
+      P('lost', 'watch', 'gym', 'Silver analog watch with a brown strap, left in the changing room.', 'meera', 6 * DAY),
+      P('found', 'charger', 'lhc', 'Apple 20W charger with cable, found in a socket in LC-101.', 'rohan', 13 * DAY + 12 * HOUR),
+      P('lost', 'bottle', 'h5', 'Blue steel bottle.', 'rohan', 15 * DAY)
+    ];
+    return { seedAt: t, counter: c, viewer: 'you', locs: { you: 'lhc', meera: 'lhc', rohan: 'lib' }, posts: posts };
+  }
+
+  /* ---------- select builders ---------- */
+  function locOptions(selected, withAll) {
+    var h = withAll ? '<option value="">All campus</option>' : '';
+    if (withAll) {
+      h += '<optgroup label="Zones">';
+      Object.keys(H.ZONES).forEach(function (z) { h += '<option value="zone:' + z + '"' + (selected === 'zone:' + z ? ' selected' : '') + '>' + H.ZONES[z] + '</option>'; });
+      h += '</optgroup>';
+    }
+    Object.keys(H.ZONES).forEach(function (z) {
+      h += '<optgroup label="' + H.ZONES[z] + '">';
+      H.LOCATIONS.filter(function (l) { return l.zone === z; }).forEach(function (l) {
+        h += '<option value="' + l.id + '"' + (selected === l.id ? ' selected' : '') + '>' + esc(l.name) + '</option>';
+      });
+      h += '</optgroup>';
+    });
+    return h;
+  }
+  function catOptions(selected, ids, withAll) {
+    var h = withAll ? '<option value="">All categories</option>' : '';
+    H.CATEGORIES.forEach(function (c) {
+      if (ids && ids.indexOf(c.id) < 0) return;
+      h += '<option value="' + c.id + '"' + (selected === c.id ? ' selected' : '') + '>' + esc(c.label) + '</option>';
+    });
+    return h;
+  }
+
+  /* ---------- cards ---------- */
+  function contactHTML(p, v) {
+    var c = H.contactFor(p, v, USERS);
+    return c ? '<div class="contact">Handoff agreed. Contact: <strong>' + esc(c) + '</strong>. Shared only with the two of you.</div>' : '';
+  }
+  function claimFormHTML(p) {
+    var label, ph, req = false, name = USERS[p.author].name;
+    if (p.type === 'need') { label = 'When can you reach them?'; ph = 'e.g. 5 min away, I have a 20W charger'; }
+    else if (H.isHolder(p)) { label = p.verifyQ || 'Describe something only the owner would know'; ph = 'Your answer'; req = true; }
+    else { label = 'Where can you hand it over?'; ph = 'e.g. At the library desk until 5 pm'; }
+    return '<form class="claim" data-claim-form="' + p.id + '"><label for="claim-text-' + p.id + '">' + esc(label) + '</label>' +
+      '<input id="claim-text-' + p.id + '" type="text" maxlength="140" placeholder="' + esc(ph) + '"' + (req ? ' required' : '') + '>' +
+      '<div class="row"><button type="submit" class="primary small">Send to ' + esc(name) + '</button><button type="button" class="ghost small" data-act="claim-cancel">Cancel</button></div>' +
+      '<p class="fine">Your contact is shared only if ' + esc(name) + ' accepts.</p></form>';
+  }
+  function actionsHTML(p, v, t, status) {
+    var h = '', mine = p.author === v.id;
+    if (mine) {
+      if (status === 'open') {
+        p.claims.filter(function (c) { return c.status === 'pending'; }).forEach(function (c) {
+          h += '<div class="resp"><div><strong>' + esc(USERS[c.by].name) + '</strong> ' + (H.isHolder(p) ? 'answered' : 'says') + ': “' + esc(c.text || 'no message') + '”</div>' +
+            '<div class="row"><button class="primary small" data-act="approve" data-post="' + p.id + '" data-claim="' + c.id + '">Accept</button>' +
+            '<button class="ghost small" data-act="decline" data-post="' + p.id + '" data-claim="' + c.id + '">Decline</button></div></div>';
+        });
+        if (p.type !== 'need') {
+          var ms = H.suggestMatches(p, state.posts, t);
+          if (ms.length) {
+            h += '<div class="match"><div class="eyebrow">Possible matches</div>';
+            ms.forEach(function (m) {
+              var o = m.post;
+              h += '<div class="match-item"><span>' + ({ found: 'Found', lost: 'Lost' }[o.type]) + ': ' + esc(H.catLabel(o.category)) + ' at ' + esc(H.locName(o.loc)) + ', ' + H.ago(t - o.created) + '</span>' +
+                '<button class="ghost small" data-act="goto" data-post="' + o.id + '">View</button></div>';
+            });
+            h += '</div>';
+          }
+        }
+        h += '<div class="row"><button class="ghost small" data-act="close" data-post="' + p.id + '">Close post</button></div>';
+      } else if (status === 'claimed') {
+        h += contactHTML(p, v) + '<div class="row"><button class="ghost small" data-act="close" data-post="' + p.id + '">Mark as handed over</button></div>';
+      } else if (status === 'closed') { h += contactHTML(p, v); }
+    } else {
+      var my = null; p.claims.forEach(function (c) { if (c.by === v.id) my = c; });
+      if (my && my.status === 'pending') h += '<p class="note">Sent. Waiting for ' + esc(USERS[p.author].name) + ' to reply.</p>';
+      else if (my && my.status === 'approved') h += contactHTML(p, v);
+      else if (my && my.status === 'declined') h += '<p class="note">' + esc(USERS[p.author].name) + ' did not accept this one.</p>';
+      else if (status === 'open') {
+        if (claimOpen === p.id) h += claimFormHTML(p);
+        else h += '<div class="row"><button class="primary small" data-act="claim-open" data-post="' + p.id + '">' + ({ need: 'I can help', found: 'This is mine', lost: 'I found this' }[p.type]) + '</button></div>';
+      }
+    }
+    return h;
+  }
+  function cardHTML(p0) {
+    var v = viewer(), t = now(), p = H.view(p0, v), status = H.statusOf(p0, t), mine = p.author === v.id;
+    var label = { need: 'Need now', lost: 'Lost', found: 'Found' }[p.type];
+    var title = { need: 'Needs: ', lost: 'Lost: ', found: 'Found: ' }[p.type] + H.catLabel(p.category);
+    var where = esc(H.locName(p.loc));
+    if (H.isHolder(p) && p.nowAt && p.nowAt !== p.loc) where = 'Picked up at ' + where + ', now at ' + esc(H.locName(p.nowAt));
+    var top = status === 'open'
+      ? '<span class="clock">' + H.left(p.expires - t) + ' left</span>'
+      : '<span class="chip">' + { claimed: 'Handoff agreed', closed: 'Closed', expired: 'Expired' }[status] + '</span>';
+    return '<article class="card' + (hl === p.id ? ' hl' : '') + '" id="post-' + p.id + '">' +
+      '<div class="card-top"><span class="badge ' + p.type + '">' + label + '</span>' + top + '</div>' +
+      '<h3>' + esc(title) + '</h3><p class="desc">' + esc(p.desc) + '</p>' +
+      '<p class="meta">' + where + ' · ' + H.ago(t - p.created) + ' · ' + (mine ? 'Your post' : 'Posted by ' + esc(USERS[p.author].name)) + '</p>' +
+      actionsHTML(p0, v, t, status) + '</article>';
+  }
+
+  /* ---------- panels ---------- */
+  function renderNeed() {
+    var v = viewer(), f = H.needFeed(state.posts, v, now());
+    var h = '<div class="panel-head"><h2>Requests at ' + esc(H.locName(v.loc)) + '</h2><p>People here, right now, need these. Only students in this place can see them, and each one disappears when its timer ends.</p></div>';
+    if (f.here.length) h += '<div class="list">' + f.here.map(cardHTML).join('') + '</div>';
+    else h += '<div class="empty">No open requests at this place. Ask for something, or change “I am at” above.</div>';
+    if (f.hidden) h += '<p class="note">' + f.hidden + ' more open request' + (f.hidden > 1 ? 's are' : ' is') + ' hidden because you are not in those places.</p>';
+    h += '<div class="row"><button class="primary" data-act="new-need">Ask for something here</button></div>';
+    $('panel').innerHTML = h;
+  }
+  function renderLF() {
+    var h = '<div class="panel-head"><h2>Lost and found</h2><p>One list for the whole campus, including things picked up by mistake, filtered by place and category. Details of found IDs and phones stay private until the owner answers a question.</p></div>' +
+      '<div class="filters"><div class="seg" role="group" aria-label="Type">' +
+      [['', 'All'], ['lost', 'Lost'], ['found', 'Found']].map(function (x) { return '<button type="button" data-act="lf-type" data-v="' + x[0] + '" aria-pressed="' + (lf.type === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div>' +
+      '<input id="lf-q" type="search" placeholder="Search, e.g. black umbrella" value="' + esc(lf.q) + '" aria-label="Search">' +
+      '<div class="filters-grid"><select id="lf-cat" aria-label="Category">' + catOptions(lf.cat, null, true) + '</select>' +
+      '<select id="lf-loc" aria-label="Place">' + locOptions(lf.loc, true) + '</select>' +
+      '<select id="lf-age" aria-label="Recency">' + [[1, 'Last 24 hours'], [3, 'Last 3 days'], [7, 'Last 7 days'], [14, 'Last 14 days']].map(function (a) { return '<option value="' + a[0] + '"' + (+lf.age === a[0] ? ' selected' : '') + '>' + a[1] + '</option>'; }).join('') + '</select></div></div>' +
+      '<p class="note" id="lf-count"></p><div class="list" id="lf-list"></div>';
+    $('panel').innerHTML = h; renderLFList();
+  }
+  function renderLFList() {
+    var rows = H.filterLF(state.posts, viewer(), now(), { type: lf.type, category: lf.cat, loc: lf.loc, q: lf.q, maxAgeDays: +lf.age });
+    $('lf-count').textContent = rows.length + ' item' + (rows.length === 1 ? '' : 's');
+    $('lf-list').innerHTML = rows.length ? rows.map(cardHTML).join('') : '<div class="empty">Nothing matches these filters. Widen the place or recency.</div>';
+  }
+  function renderPost() {
+    var v = viewer(), need = formType === 'need', holder = formType === 'found';
+    var h = '<div class="panel-head"><h2>New post</h2></div><form class="form" id="post-form">' +
+      '<div class="seg" role="group" aria-label="Post type">' +
+      [['need', 'Need now'], ['found', 'I found something'], ['lost', 'I lost something']].map(function (x) { return '<button type="button" data-act="form-type" data-v="' + x[0] + '" aria-pressed="' + (formType === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div>' +
+      '<div class="field"><label for="f-cat">Category</label><select id="f-cat">' + catOptions('', need ? H.NEED_CATS : null, false) + '</select></div>';
+    h += '<div class="field"><label for="f-loc">' + (need ? 'Where' : ({ found: 'Found or picked up at', lost: 'Last seen near' }[formType])) + '</label><select id="f-loc">' + locOptions(v.loc, false) + '</select>' +
+      (need ? '<p class="fine">Defaults to where you are (' + esc(H.locName(v.loc)) + '), or pick any campus location.</p>' : '') + '</div>';
+    h += (holder ? '<div class="field"><label for="f-now">Item is now at</label><select id="f-now"><option value="">Same place</option>' + locOptions('', false) + '</select><p class="fine">If you moved it, say where, so the owner can find it.</p></div>' : '') + '<div class="field"><label for="f-desc">' + (need ? 'What do you need it for?' : 'Description') + '</label><textarea id="f-desc" maxlength="200" placeholder="' + (need ? 'e.g. iPhone at 3%, 10 minutes is enough' : formType === 'found' ? 'Colour, brand, marks. Took something by mistake? Post it here so the owner can find it. For IDs, keep names to initials.' : 'Colour, brand, marks. For IDs, keep names to initials.') + '"></textarea></div>';
+    if (need) h += '<div class="field"><label for="f-ttl">Keep this open for</label><select id="f-ttl">' + H.NEED_TTLS.map(function (m) { return '<option value="' + m + '"' + (m === 30 ? ' selected' : '') + '>' + m + ' minutes</option>'; }).join('') + '</select></div>';
+    if (holder) h += '<div class="field"><label for="f-verify">Question only the owner can answer</label><input id="f-verify" type="text" maxlength="100" placeholder="e.g. What is on the lock screen?"><p class="fine">Required for IDs and phones or tablets. Their details stay hidden from everyone else.</p></div>';
+    h += '<div class="row"><button type="submit" class="primary">Post</button></div></form>';
+    $('panel').innerHTML = h;
+  }
+  function renderMine() {
+    var v = viewer(), t = now();
+    var mine = state.posts.filter(function (p) { return p.author === v.id; }).sort(function (a, b) { return b.created - a.created; });
+    var resp = state.posts.filter(function (p) { return p.author !== v.id && p.claims.some(function (c) { return c.by === v.id; }); });
+    var h = '<div class="panel-head"><h2>Your posts</h2><p>Matches and responses show up here.</p></div>';
+    h += mine.length ? '<div class="list">' + mine.map(cardHTML).join('') + '</div>' : '<div class="empty">Nothing posted yet.</div>';
+    h += '<h2 class="section-title">Your responses</h2>';
+    h += resp.length ? '<div class="list">' + resp.map(cardHTML).join('') + '</div>' : '<div class="empty">You have not responded to anyone.</div>';
+    $('panel').innerHTML = h;
+  }
+  function renderTabs() {
+    var v = viewer(), t = now();
+    var nNeed = H.needFeed(state.posts, v, t).here.length;
+    var nMine = state.posts.filter(function (p) { return p.author === v.id && H.statusOf(p, t) !== 'expired' && p.status !== 'closed'; }).length;
+    var defs = [['need', 'Need now', nNeed], ['lf', 'Lost & found', null], ['post', 'Post', null], ['mine', 'Mine', nMine]];
+    $('tabs').innerHTML = defs.map(function (d) {
+      return '<button class="tab" role="tab" data-act="tab" data-v="' + d[0] + '" aria-selected="' + (tab === d[0]) + '">' + d[1] + (d[2] !== null ? '<span class="count">' + d[2] + '</span>' : '') + '</button>';
+    }).join('');
+  }
+  function renderDemo() {
+    var w = $('who'); if (!w.options.length) w.innerHTML = Object.keys(USERS).map(function (k) { return '<option value="' + k + '">' + USERS[k].name + (k === 'you' ? ' (you)' : '') + '</option>'; }).join('');
+    w.value = state.viewer;
+    $('where').innerHTML = locOptions(state.locs[state.viewer], false);
+  }
+  function render() {
+    renderDemo(); renderTabs();
+    if (tab === 'need') renderNeed(); else if (tab === 'lf') renderLF(); else if (tab === 'post') renderPost(); else renderMine();
+  }
+
+  /* ---------- events ---------- */
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest('[data-act]'); if (!el) return;
+    var act = el.dataset.act, p = el.dataset.post ? byId(el.dataset.post) : null, v = viewer(), t = now(), r;
+    if (act === 'tab') { tab = el.dataset.v; claimOpen = null; hl = null; render(); }
+    else if (act === 'new-need') { formType = 'need'; tab = 'post'; render(); }
+    else if (act === 'form-type') { formType = el.dataset.v; renderPost(); }
+    else if (act === 'lf-type') { lf.type = el.dataset.v; renderLF(); }
+    else if (act === 'claim-open') { claimOpen = p.id; render(); var i = $('claim-text-' + p.id); if (i) i.focus(); }
+    else if (act === 'claim-cancel') { claimOpen = null; render(); }
+    else if (act === 'approve' || act === 'decline') {
+      r = H.decideClaim(p, el.dataset.claim, v, act === 'approve', t);
+      if (!r.ok) toast(REASONS[r.reason]); else { save(); toast(act === 'approve' ? 'Accepted. Contact details are now visible to both of you.' : 'Declined.'); }
+      render();
+    }
+    else if (act === 'close') { r = H.closePost(p, v); if (r.ok) { save(); toast('Closed.'); } render(); }
+    else if (act === 'goto') { tab = 'lf'; lf = { type: '', cat: '', loc: '', q: '', age: 14 }; hl = p.id; render(); var c = $('post-' + p.id); if (c) c.scrollIntoView({ block: 'center' }); }
+    else if (act === 'skip') { clock += 30 * MIN; toast('Skipped 30 minutes. Need-now requests past their timer are gone.'); render(); }
+    else if (act === 'reset') { state = seed(); clock = 0; claimOpen = null; hl = null; save(); toast('Demo data reset.'); render(); }
+  });
+  document.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var f = e.target, v = viewer(), t = now(), r;
+    if (f.dataset.claimForm) {
+      var p = byId(f.dataset.claimForm);
+      r = H.addClaim(p, v, $('claim-text-' + p.id).value, t);
+      if (!r.ok) { toast(REASONS[r.reason]); return; }
+      claimOpen = null; save(); toast('Sent to ' + USERS[p.author].name + '.'); render();
+    } else if (f.id === 'post-form') {
+      var g = function (id) { var x = $(id); return x ? x.value : ''; };
+      var chosenLoc = g('f-loc') || v.loc;
+      r = H.makePost({ type: formType, category: g('f-cat'), loc: chosenLoc, desc: g('f-desc'), verifyQ: g('f-verify'), nowAt: g('f-now'), ttlMin: +g('f-ttl') }, v, t, state.counter + 1);
+      if (!r.ok) { toast(REASONS[r.reason] || 'Check the form.'); return; }
+      state.counter++; state.posts.unshift(r.post); save();
+      if (formType === 'need') {
+        if (state.locs[v.id] !== chosenLoc) state.locs[v.id] = chosenLoc;
+        save();
+        tab = 'need';
+        toast('Posted. Students at ' + H.locName(chosenLoc) + ' can see it.');
+      } else {
+        var n = H.suggestMatches(r.post, state.posts, t).length;
+        tab = 'mine';
+        toast(n ? 'Posted. ' + n + ' possible match' + (n > 1 ? 'es' : '') + ' found.' : 'Posted. We will show matches here.');
+      }
+      render();
+    }
+  });
+  document.addEventListener('input', function (e) {
+    if (e.target.id === 'lf-q') { lf.q = e.target.value; renderLFList(); }
+  });
+  document.addEventListener('change', function (e) {
+    var id = e.target.id;
+    if (id === 'lf-cat') { lf.cat = e.target.value; renderLFList(); }
+    else if (id === 'lf-loc') { lf.loc = e.target.value; renderLFList(); }
+    else if (id === 'lf-age') { lf.age = +e.target.value; renderLFList(); }
+    else if (id === 'who') { state.viewer = e.target.value; claimOpen = null; hl = null; save(); render(); }
+    else if (id === 'where') { state.locs[state.viewer] = e.target.value; save(); toast('Now showing what someone at ' + H.locName(e.target.value) + ' would see.'); render(); }
+  });
+  setInterval(function () {
+    var a = document.activeElement;
+    if (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) return;
+    if (tab === 'need' || tab === 'mine') render(); else renderTabs();
+  }, 30000);
+
+  state = load() || seed(); save(); render();
+})();
+</script>
