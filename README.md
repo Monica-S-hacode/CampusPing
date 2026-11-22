@@ -3,7 +3,7 @@ GROWW_CaseStudy_Submission
 
 CampusPing - submission contents
 
-App link: https://claude.ai/artifact/Ky9ax6QA1DMyL8hcF67rez
+App link: https://monica-s-hacode.github.io/CampusPing/
 
 1_Brief_CampusPing.pdf   One-page brief (problem, scope, out of scope, solution)
 2_Prompts.md             Prompts used to create the tool
